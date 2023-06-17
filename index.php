@@ -1,5 +1,28 @@
 <?php
 	include 'script.php';
+	
+	// Genereer een lege array voor de grafiekgegevens
+$grafiekGegevens = array();
+
+// Loop door de maanden en voeg de gegevens toe aan de grafiekarray
+foreach ($maanden as $index => $maand) {
+    // Controleer of het de eerste tabblad is (overzicht)
+    if ($index === 0) {
+        $totaalPerType = array();
+
+        // Loop door de typen en voeg het totaal per type toe aan de grafiekarray
+        foreach ($typenPerMaand as $type => $maandenData) {
+            $totaal = isset($maandenData[$maand]) ? $maandenData[$maand] : 0;
+            $totaalPerType[$type] = $totaal;
+        }
+
+        // Voeg de grafiekgegevens toe aan de grafiekarray
+        $grafiekGegevens[] = array(
+            "label" => $maand,
+            "data" => $totaalPerType
+        );
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -41,6 +64,9 @@
 
 			// Controleer of het de eerste tabblad is (overzicht)
 			if ($index === 0) {	
+			
+				echo '<div id="chartContainer"></div><br>';
+			
 				// Genereer de tabelkop voor het overzicht
 				echo '
 					<table>
@@ -60,33 +86,56 @@
 				// Bepaal het aantal voorkomende typen per maand
 				$typenPerMaand = array();
 
-				// Loop door de gegevens in de sessie-array en tel de typen per maand
-				foreach ($_SESSION['maandtabellen'] as $maandnaam => $maandgegevens) {
-					foreach ($maandgegevens as $gegevens) {
-						$maand = $maandnaam; // Gebruik de maandnaam uit de array-sleutel
-						$type = $gegevens['type']; // Haal het type uit de gegevens
+// Bepaal het aantal voorkomende typen per maand
+$typenPerMaand = array();
+$totaalPerType = array();
 
-						// Tel het aantal voorkomende typen per maand
-						if (!isset($typenPerMaand[$type])) {
-							$typenPerMaand[$type] = array();
-						}
+// Loop door de gegevens in de sessie-array en tel de typen per maand
+foreach ($_SESSION['maandtabellen'] as $maandnaam => $maandgegevens) {
+    foreach ($maandgegevens as $gegevens) {
+        $maand = $maandnaam; // Gebruik de maandnaam uit de array-sleutel
+        $type = $gegevens['type']; // Haal het type uit de gegevens
 
-						if (!isset($typenPerMaand[$type][$maand])) {
-							$typenPerMaand[$type][$maand] = 0;
-						}
+        // Tel het aantal voorkomende typen per maand
+        if (!isset($typenPerMaand[$type])) {
+            $typenPerMaand[$type] = array();
+        }
 
-						$typenPerMaand[$type][$maand]++;
-					}
-				}
+        if (!isset($typenPerMaand[$type][$maand])) {
+            $typenPerMaand[$type][$maand] = 0;
+        }
 
-				// Variabele om het totaal van typen bij te houden
-				$totaalPerType = array();
+        $typenPerMaand[$type][$maand]++;
+    }
+}
 
-				// Loop door de typen en bereken het totaal per type
-				foreach ($typenPerMaand as $type => $maandenData) {
-					$totaal = array_sum($maandenData);
-					$totaalPerType[$type] = $totaal;
-				}
+// Loop door de typen en bereken het totaal per type
+foreach ($typenPerMaand as $type => $maandenData) {
+    $totaal = array_sum($maandenData);
+    $totaalPerType[$type] = $totaal;
+}
+
+// Maak een array van de typen en hun gegevens voor de grafiek
+$grafiekGegevens = array();
+
+foreach ($typenPerMaand as $type => $maandenData) {
+    $dataPoints = array();
+
+    foreach ($maandenData as $maand => $aantal) {
+        $dataPoints[] = array(
+            "label" => $maand,
+            "y" => $aantal
+        );
+    }
+
+    $grafiekGegevens[] = array(
+        "type" => "area",
+        "name" => $type,
+        "showInLegend" => true,
+        "dataPoints" => $dataPoints
+    );
+}
+
 
 				// Loop door de typen en toon het aantal per maand en het totaal
 				foreach ($typenPerMaand as $type => $maandenData) {
@@ -257,6 +306,7 @@
             }
         }
 		
+		// Functie om de gegevens te updaten
 		function updateData(cel, month, kolom) {
 			var waarde = cel.innerText;
 			var parentRow = cel.parentNode;
@@ -327,6 +377,33 @@
 				}
 			}
 		});
+		
+		// Functie om de grafiek te genereren
+function generateChart() {
+    var chartData = <?php echo json_encode($grafiekGegevens); ?>;
+
+    // Genereer de grafiek met behulp van de chartData
+    var chart = new CanvasJS.Chart("chartContainer", {
+        animationEnabled: true,
+        title: {
+            text: "Grafiek van maandelijkse totalen"
+        },
+        axisX: {
+            title: "Maanden"
+        },
+        axisY: {
+            title: "Aantal"
+        },
+        data: chartData
+    });
+
+    // Teken de grafiek
+    chart.render();
+}
+
+// Roep de functie generateChart aan bij het laden van de pagina
+window.addEventListener('DOMContentLoaded', generateChart);
+
 
     </script>
 </body>

@@ -140,6 +140,10 @@ th i {
 	transform: rotate(180deg);
 }
 
+#chartContainer {
+	height: 400px;
+}
+
 table,
 tbody {
 	width: 100%;
