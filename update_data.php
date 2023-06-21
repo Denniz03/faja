@@ -2,23 +2,25 @@
     require 'script.php';
 
     // Controleer of de vereiste gegevens zijn verzonden
-    if (isset($_POST['id'], $_POST['month'], $_POST['kolom'], $_POST['waarde'])) {
+    if (isset($_POST['id'], $_POST['kolom'], $_POST['waarde'])) {
         // Ontvang de verzonden gegevens
         $id = $_POST['id'];
-        $month = $_POST['month'];
         $kolom = $_POST['kolom'];
         $waarde = $_POST['waarde'];
 
-        // Werk de sessiegegevens bij
-        $month = $maanden[$month];
+        // Escapen van speciale karakters voordat ze in de query worden gebruikt
+        $id = mysqli_real_escape_string($conn, $id);
+        $kolom = mysqli_real_escape_string($conn, $kolom);
+        $waarde = mysqli_real_escape_string($conn, $waarde);
 
-        // Doorloop de gegevens van de maand en zoek naar het specifieke id
-        foreach ($_SESSION['maandtabellen'][$month] as &$gegevens) {
-            if ($gegevens['id'] === $id) {
-                // Update het veld met de nieuwe waarde
-                $gegevens[$kolom] = $waarde;
-                break;
-            }
+        // Query om de gegevens bij te werken in de database
+        $query = "UPDATE $tableName SET $kolom='$waarde' WHERE id='$id'";
+
+        // Uitvoeren van de query
+        if (mysqli_query($conn, $query)) {
+            echo "Gegevens succesvol bijgewerkt in de database.<br>";
+        } else {
+            echo "Fout bij bijwerken van gegevens: " . mysqli_error($conn);
         }
 
         // Stuur een succesvolle respons terug naar de client
@@ -27,7 +29,6 @@
             'message' => 'Oplossing succesvol bijgewerkt.',
             'received_data' => array(
                 'id' => $id,
-                'maand' => $month,
                 'kolom' => $kolom,
                 'waarde' => $waarde
             )

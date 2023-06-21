@@ -1,9 +1,31 @@
 <?php
-	session_start();
 
-	ini_set('display_errors', 0);
-	ini_set('display_startup_errors', 0);
-	//error_reporting(E_ALL);
+	session_start();
+	
+	$host = 'localhost';
+	$dbName = 'faja';
+	$username = 'denniz03';
+	$password = 'gxd7Hv';
+	$tableName = 'jobs';
+	
+	//CONNECT
+    $conn = new mysqli($host, $username, $password, $dbName);
+    $conn -> set_charset("utf8mb4");
+	if (!$conn) {
+		$_SESSION['error'] = mysqli_connect_error();
+		$_SESSION['timeout'] = time() + 5;
+	};
+    // BASICS
+    date_default_timezone_set('Europe/Amsterdam');
+    $title = 'FAJA';
+    $company = 'Denniz03';
+    $version = 'Versie 1.0';
+    $day = time() + (86400 * 30);
+	
+	// Troubleshooting
+	ini_set('display_errors', 1);
+	ini_set('display_startup_errors', 1);
+	error_reporting(E_ALL);
 
 	// Maak een array met de namen van de maanden
 	$maanden = array(
@@ -37,16 +59,11 @@
 		"Dec"
 	);
 
-	// Controleer of de sessie-array voor maandtabellen al bestaat, anders initialiseren we deze
-	if (!isset($_SESSION['maandtabellen'])) {
-		$_SESSION['maandtabellen'] = array();
-	}
-
 	// Verwerk het ingediende formulier als er gegevens zijn ingevuld
-	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['data'])) {
 		$data = $_POST['data'];
 
-		// Verwerk de ingediende gegevens en voeg ze toe aan de juiste maandtab-array in de sessie
+		// Verwerk de ingediende gegevens en voeg ze toe aan de database
 		if (!empty($data)) {
 			$rows = explode(PHP_EOL, $data); // Scheid de regels op basis van nieuwe regels (enter)
 			foreach ($rows as $row) {
@@ -63,32 +80,33 @@
 				$id = $gegevens['id'];
 				$datum = $gegevens['datum'];
 				$day = explode('-', $datum)[0];
+				$formattedDate = date('Y-m-d', strtotime($datum)); // Omzetten naar juist datumformaat (YYYY-MM-DD)
 
-				// Bepaal de juiste maandindex op basis van de datum
-				$monthIndex = getMonthIndex($datum);
+				// Controleer of het ID al bestaat in de database
+				$query = "SELECT COUNT(*) AS aantal FROM $tableName WHERE id = '$id'";
+				$result = mysqli_query($conn, $query);
+				$row = mysqli_fetch_assoc($result);
+				$aantalInDatabase = $row['aantal'];
 
-				// Controleer of monthId niet leeg is
-				if ($monthIndex != '' || $monthIndex != 0) {
-					$month = $maandenKort[$monthIndex];
-					$gegevens['datum'] = $day . ' ' . $month;
-					
-					// Controleer of de maandnaam al bestaat als een array in $_SESSION['maandtabellen']
-					if (!isset($_SESSION['maandtabellen'][$month])) {
-						$_SESSION['maandtabellen'][$month] = array();
-					} 
-				
-					// Controleer of het ID al bestaat in de maandtab-array van de sessie
-					$dubbelId = false;
-					foreach ($_SESSION['maandtabellen'][$month] as $bestaandeGegevens) {
-						if ($bestaandeGegevens['id'] === $id) {
-							$dubbelId = true;
-							break;
-						}
-					}
+				// Voeg de gegevens alleen toe als het ID nog niet bestaat in de database
+				if ($aantalInDatabase == 0) {
+					// Escapen van speciale karakters voordat ze in de query worden gebruikt
+					$formattedDate  = mysqli_real_escape_string($conn, $formattedDate );
+					$id = mysqli_real_escape_string($conn, $columns[1] ?? '');
+					$type = mysqli_real_escape_string($conn, $columns[2] ?? '');
+					$details = mysqli_real_escape_string($conn, $columns[3] ?? '');
+					$ordernummer = mysqli_real_escape_string($conn, $columns[4] ?? '');
+					$oplossing = mysqli_real_escape_string($conn, $columns[5] ?? '');
 
-					// Voeg de gegevens alleen toe als het ID nog niet bestaat
-					if (!$dubbelId) {
-						$_SESSION['maandtabellen'][$month][] = $gegevens;
+					// Query om de gegevens toe te voegen aan de database
+					$query = "INSERT INTO $tableName (datum, id, type, details, ordernummer, oplossing)
+							  VALUES ('$formattedDate ', '$id', '$type', '$details', '$ordernummer', '$oplossing')";
+
+					// Uitvoeren van de query
+					if (mysqli_query($conn, $query)) {
+						echo "Gegevens succesvol toegevoegd aan de database.<br>";
+					} else {
+						echo "Fout bij toevoegen van gegevens: " . mysqli_error($conn);
 					}
 				}
 			}

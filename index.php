@@ -1,28 +1,5 @@
 <?php
 	include 'script.php';
-	
-	// Genereer een lege array voor de grafiekgegevens
-$grafiekGegevens = array();
-
-// Loop door de maanden en voeg de gegevens toe aan de grafiekarray
-foreach ($maanden as $index => $maand) {
-    // Controleer of het de eerste tabblad is (overzicht)
-    if ($index === 0) {
-        $totaalPerType = array();
-
-        // Loop door de typen en voeg het totaal per type toe aan de grafiekarray
-        foreach ($typenPerMaand as $type => $maandenData) {
-            $totaal = isset($maandenData[$maand]) ? $maandenData[$maand] : 0;
-            $totaalPerType[$type] = $totaal;
-        }
-
-        // Voeg de grafiekgegevens toe aan de grafiekarray
-        $grafiekGegevens[] = array(
-            "label" => $maand,
-            "data" => $totaalPerType
-        );
-    }
-}
 ?>
 <!DOCTYPE html>
 <html>
@@ -32,6 +9,40 @@ foreach ($maanden as $index => $maand) {
 	<link href="../fontawesome/css/all.css" rel="stylesheet">
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+	<script>
+		$(document).ready(function() {
+		  // Voeg een eventlistener toe aan alle cellen
+		  $('#tab0 td:not(:first-child)').on('mouseover', highlightColumn);
+		  $('#tab0 td').on('mouseout', resetColumn);
+
+		  // Functie om de hele kolom  te kleuren
+		  function highlightColumn(event) {
+			var currentCell = $(this);
+			var columnIndex = currentCell.index();
+			var table = currentCell.closest('table');
+
+			// Loop door alle rijen en kleur de cellen in de kolom 
+			table.find('tr').each(function() {
+			  var cell = $(this).find('td').eq(columnIndex);
+			  cell.css('background-color', '#d9edf7bb');
+			});
+		  }
+
+		  // Functie om de oorspronkelijke kleur van de kolom te herstellen
+		  function resetColumn(event) {
+			var currentCell = $(this);
+			var columnIndex = currentCell.index();
+			var table = currentCell.closest('table');
+
+			// Loop door alle rijen en herstel de oorspronkelijke kleur van de cellen in de kolom
+			table.find('tr').each(function() {
+			  var cell = $(this).find('td').eq(columnIndex);
+			  cell.css('background-color', '');
+			});
+		  }
+	
+	});
+	</script>
 </head>
 <body>
 	<header>
@@ -57,16 +68,16 @@ foreach ($maanden as $index => $maand) {
 	</header>
 	
     <main>
-        <?php
-        foreach ($maanden as $index => $maand) {
-            echo '<article class="tab" id="tab' . $index . '">';
-            echo '<h2>' . $maand . '</h2>';
+	<?php
+		foreach ($maanden as $index => $maand) {
+			echo '<article class="tab" id="tab' . $index . '">';
+			echo '<h2>' . $maand . '</h2>';
 
 			// Controleer of het de eerste tabblad is (overzicht)
-			if ($index === 0) {	
-			
+			if ($index === 0) {
+
 				echo '<div id="chartContainer"></div><br>';
-			
+
 				// Genereer de tabelkop voor het overzicht
 				echo '
 					<table>
@@ -82,71 +93,87 @@ foreach ($maanden as $index => $maand) {
 				// Voeg de totalenkolom toe
 				echo '<th>Totaal</th>';
 				echo '</tr>';
-
+				
 				// Bepaal het aantal voorkomende typen per maand
 				$typenPerMaand = array();
+				$totaalPerType = array();
+				$totaalPerMaandPerType = array();
 
-// Bepaal het aantal voorkomende typen per maand
-$typenPerMaand = array();
-$totaalPerType = array();
+				// Loop door de gegevens in de database en tel de typen per maand
+				$query = "SELECT type, DATE_FORMAT(datum, '%b') AS maand, COUNT(*) AS aantal FROM $tableName GROUP BY type, maand";
+				$result = mysqli_query($conn, $query);
 
-// Loop door de gegevens in de sessie-array en tel de typen per maand
-foreach ($_SESSION['maandtabellen'] as $maandnaam => $maandgegevens) {
-    foreach ($maandgegevens as $gegevens) {
-        $maand = $maandnaam; // Gebruik de maandnaam uit de array-sleutel
-        $type = $gegevens['type']; // Haal het type uit de gegevens
+				 while ($row = mysqli_fetch_assoc($result)) {
+					$maandnaam = $row['maand']; // Haal de maandnaam uit de database
+					$type = $row['type']; // Haal het type uit de database
+					$aantal = $row['aantal']; // Haal het aantal uit de database
 
-        // Tel het aantal voorkomende typen per maand
-        if (!isset($typenPerMaand[$type])) {
-            $typenPerMaand[$type] = array();
-        }
+					// Tel het aantal voorkomende typen per maand
+					if (!isset($typenPerMaand[$type])) {
+						$typenPerMaand[$type] = array();
+					}
+					
+					// Tel het aantal voorkomende typen per maand
+					if (!isset($typenPerMaand[$type])) {
+						$typenPerMaand[$type] = array();
+					}
 
-        if (!isset($typenPerMaand[$type][$maand])) {
-            $typenPerMaand[$type][$maand] = 0;
-        }
+					$typenPerMaand[$type][$maandnaam] = $aantal;
 
-        $typenPerMaand[$type][$maand]++;
-    }
-}
+					// Tel het aantal voorkomende typen per maand per type
+					if (!isset($totaalPerMaandPerType[$maandnaam])) {
+						$totaalPerMaandPerType[$maandnaam] = 0;
+					}
 
-// Loop door de typen en bereken het totaal per type
-foreach ($typenPerMaand as $type => $maandenData) {
-    $totaal = array_sum($maandenData);
-    $totaalPerType[$type] = $totaal;
-}
+					$totaalPerMaandPerType[$maandnaam] += $aantal;
+				}
 
-// Maak een array van de typen en hun gegevens voor de grafiek
-$grafiekGegevens = array();
+				// Loop door de typen en bereken het totaal per type
+				foreach ($typenPerMaand as $type => $maandenData) {
+					$totaal = array_sum($maandenData);
+					$totaalPerType[$type] = $totaal;
+				}
 
-foreach ($typenPerMaand as $type => $maandenData) {
-    $dataPoints = array();
+				// Maak een array van de typen en hun gegevens voor de grafiek
+				$grafiekGegevens = array();
 
-    foreach ($maandenData as $maand => $aantal) {
-        $dataPoints[] = array(
-            "label" => $maand,
-            "y" => $aantal
-        );
-    }
+				foreach ($typenPerMaand as $type => $maandenData) {
+					$dataPoints = array();
 
-    $grafiekGegevens[] = array(
-        "type" => "area",
-        "name" => $type,
-        "showInLegend" => true,
-        "dataPoints" => $dataPoints
-    );
-}
+					foreach ($maandenData as $maand => $aantal) {
+						$dataPoints[] = array(
+							"label" => $maand,
+							"y" => $aantal
+						);
+					}
 
-
+					$grafiekGegevens[] = array(
+						"type" => "area",
+						"name" => $type,
+						"showInLegend" => true,
+						"dataPoints" => $dataPoints
+					);
+				}
+				
 				// Loop door de typen en toon het aantal per maand en het totaal
 				foreach ($typenPerMaand as $type => $maandenData) {
 					echo '<tr onclick="selectRow(this)">';
 					echo '<td>' . $type . '</td>';
 
 					// Loop door de maanden en toon het aantal voorkomende typen per maand
-					foreach ($maanden as $maandnaam) {
+					foreach ($maandenKort as $index => $maandnaam) {
 						if ($maandnaam != 'Overzicht') {
-							$aantal = isset($maandenData[$maandnaam]) ? $maandenData[$maandnaam] : 0;
-							echo '<td>' . $aantal . '</td>';
+							$aantal = 0;
+
+							// Loop door de maanden in de database en vergelijk case-insensitive
+							foreach ($maandenData as $maand => $aantalPerMaand) {
+								if (strcasecmp($maand, $maandnaam) === 0) {
+									$aantal = $aantalPerMaand;
+									break;
+								}
+							}
+
+							echo '<td data-index="' . $index . '">' . $aantal . '</td>';
 						}
 					}
 
@@ -154,7 +181,7 @@ foreach ($typenPerMaand as $type => $maandenData) {
 					echo '<td class="total-column">' . $totaalPerType[$type] . '</td>';
 					echo '</tr>';
 				}
-				
+
 				// Voeg de totalenrij toe
 				echo '<tr class="total-row">';
 				echo '<td>Totaal</td>';
@@ -163,7 +190,7 @@ foreach ($typenPerMaand as $type => $maandenData) {
 				$totaalPerMaand = array();
 
 				// Loop door de maanden en bereken het totaal per maand
-				foreach ($maanden as $maandnaam) {
+				foreach ($maandenKort as $index => $maandnaam) {
 					if ($maandnaam != 'Overzicht') {
 						$totaal = 0;
 
@@ -174,53 +201,56 @@ foreach ($typenPerMaand as $type => $maandenData) {
 						}
 
 						// Voeg het totaal toe aan de totalenrij
-						echo '<td>' . $totaal . '</td>';
+						echo '<td data-index="' . $index . '">' . $totaal . '</td>';
 
-						// Voeg het totaal toe aan de $totaalPerMaand array
-						$totaalPerMaand[$maandnaam] = $totaal;
+						// Voeg het totaal toe aan de $totalen array
+						$totalen[$maandnaam] = $totaal;
 					}
 				}
 
 				echo '<td></td></tr>';
-
 				echo '</table>';
 				
-            } else {
-                // Genereer de tabelkop voor de maandtab
-                echo '
-                    <table>
-                        <tr>
-                            <th onclick="sorteerTabel(this, 0)">Datum<i class="fad fa-sort"></i></th>
-                            <th onclick="sorteerTabel(this, 1)">ID<i class="fad fa-sort"></i></th>
-                            <th onclick="sorteerTabel(this, 2)">Type<i class="fad fa-sort"></i></th>
-                            <th onclick="sorteerTabel(this, 3)">Details<i class="fad fa-sort"></i></th>
-                            <th onclick="sorteerTabel(this, 4)">Ordernummer<i class="fad fa-sort"></i></th>
-                            <th onclick="sorteerTabel(this, 5)">Oplossing<i class="fad fa-sort"></i></th>
-                        </tr>';
+			} else {
+				
+				// Genereer de tabelkop voor de maandtab
+				echo '
+					<table>
+						<tr>
+							<th onclick="sorteerTabel(this, 0)">Datum<i class="fad fa-sort"></i></th>
+							<th onclick="sorteerTabel(this, 1)">ID<i class="fad fa-sort"></i></th>
+							<th onclick="sorteerTabel(this, 2)">Type<i class="fad fa-sort"></i></th>
+							<th onclick="sorteerTabel(this, 3)">Details<i class="fad fa-sort"></i></th>
+							<th onclick="sorteerTabel(this, 4)">Ordernummer<i class="fad fa-sort"></i></th>
+							<th onclick="sorteerTabel(this, 5)">Oplossing<i class="fad fa-sort"></i></th>
+						</tr>';
 
-                // Loop door de gegevens in de sessie-array voor de huidige maandtab en toon ze
-                if (isset($_SESSION['maandtabellen'][$maand])) {
-                    foreach ($_SESSION['maandtabellen'][$maand] as $gegevens) {
-                        echo '<tr onclick="selectRow(this)"' . ($gegevens['oplossing'] !== '' ? ' class="oplossing-gevuld"' : '') . '>';
-                        foreach ($gegevens as $kolom => $waarde) {
-							// Controleer of $waarde een string is, anders converteer het naar een string
-							if (!is_string($waarde)) {
-								$waarde = strval($waarde);
-							}
+				// Haal de gegevens uit de database voor de huidige maandtab en toon ze
+				$maandnaam = strtolower($maandenKort[$index]);
+				$query = "SELECT DATE_FORMAT(datum, '%e-%b-%y') AS maand, id, type, details, ordernummer, oplossing FROM $tableName WHERE DATE_FORMAT(datum, '%b') = '$maandnaam' ORDER BY id ASC";
+				$result = mysqli_query($conn, $query);
 
-							// Ontsnappen aan speciale tekens in de waarde
-							$waarde = htmlspecialchars($waarde);
-							echo '<td contenteditable="true" oninput="updateData(this, ' . $index . ', \'' . $kolom . '\')">' . $waarde . '</td>';                        }
-                        echo '</tr>';
-                    }
-                }
+				while ($row = mysqli_fetch_assoc($result)) {
+					echo '<tr onclick="selectRow(this)"' . ($row['oplossing'] !== '' ? ' class="oplossing-gevuld"' : '') . '>';
+					foreach ($row as $kolom => $waarde) {
+						if ($kolom == 'maand') {
+							$datum = explode('-', $waarde);
+							$waarde = $datum[0] . ' ' . $datum[1];
+						}
+						if ($kolom == 'maand' || $kolom == 'id' || $kolom == 'type') {
+							$contenteditable = 'contenteditable="false"';
+						} else {
+							$contenteditable = 'contenteditable="true"';
+						}
+						echo '<td  '. $contenteditable . ' oninput="updateData(this, ' . $index . ', \'' . $kolom . '\')">' . $waarde . '</td>';
+					}
+					echo '</tr>';
+				}
 
-                echo '</table>';
-            }
-
-            echo '</article>';
-        }
-		
+				echo '</table>';
+			}
+			echo '</article>';
+		}
 		// Voeg een formulier toe om tekstgegevens aan de tabel toe te voegen
 		echo '<article class="tab" id="tabAdd">';
 		echo '<h2> Toevoegen </h2>';
@@ -231,8 +261,8 @@ foreach ($typenPerMaand as $type => $maandenData) {
 				<button type="submit">Toevoegen</button>
 			</form>';
 		echo '</article>';
-
-        ?>
+		mysqli_close($conn);
+	?>
     </main>
 	
 	<footer>
@@ -313,7 +343,6 @@ foreach ($typenPerMaand as $type => $maandenData) {
 			if (parentRow && parentRow.getElementsByTagName('td') && parentRow.getElementsByTagName('td').length > 1) {
 				var id = parentRow.getElementsByTagName('td')[1].innerText;
 				console.log('id:', id);
-				console.log('month:', month);
 				console.log('kolom:', kolom);
 			} else {
 				console.log('Fout: Ongeldige cel of cel.parentNode');
@@ -329,7 +358,7 @@ foreach ($typenPerMaand as $type => $maandenData) {
 			};
 			xhr.open('POST', 'update_data.php', true);
 			xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-			xhr.send('month=' + month + '&id=' + id + '&kolom=' + kolom + '&waarde=' + waarde);
+			xhr.send('&id=' + id + '&kolom=' + kolom + '&waarde=' + waarde);
 		}
 		
 		// Functie om een tabelrij te markeren bij selectie
@@ -378,33 +407,31 @@ foreach ($typenPerMaand as $type => $maandenData) {
 			}
 		});
 		
-		// Functie om de grafiek te genereren
-function generateChart() {
-    var chartData = <?php echo json_encode($grafiekGegevens); ?>;
+		window.onload = function() {
+		// Grafiekgegevens ophalen uit de PHP-variabele
+		var grafiekData = <?php echo $grafiekGegevens; ?>;
 
-    // Genereer de grafiek met behulp van de chartData
-    var chart = new CanvasJS.Chart("chartContainer", {
-        animationEnabled: true,
-        title: {
-            text: "Grafiek van maandelijkse totalen"
-        },
-        axisX: {
-            title: "Maanden"
-        },
-        axisY: {
-            title: "Aantal"
-        },
-        data: chartData
-    });
+		// Grafiek instellen en renderen
+		var grafiek = new CanvasJS.Chart("chartContainer", {
+			animationEnabled: true,
+			title: {
+				text: "Grafiek van typen per maand"
+			},
+			axisX: {
+				title: "Maand"
+			},
+			axisY: {
+				title: "Aantal"
+			},
+			legend: {
+				verticalAlign: "top"
+			},
+			data: grafiekData
+		});
 
-    // Teken de grafiek
-    chart.render();
-}
-
-// Roep de functie generateChart aan bij het laden van de pagina
-window.addEventListener('DOMContentLoaded', generateChart);
-
-
+		grafiek.render();
+	}
+	
     </script>
 </body>
 </html>

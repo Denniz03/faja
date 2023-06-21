@@ -71,11 +71,9 @@ nav {
 }
 
  button {
-    margin: 0px -1px -1px 0px;
     padding: 15px;
     background: #f7f7f7;
     border: 1px solid transparent;
-    .border-radius: 5px 5px 0px 0px;
 	position: relative;
   display: inline-block;
 }
@@ -85,7 +83,6 @@ nav {
 }
 
 nav button.active {
-	.padding: 20px 20px 15px 20px;
     background: #eee;
 	font-weight: bold;
 }
@@ -94,7 +91,7 @@ nav button.active::after {
   content: '';
   position: absolute;
   left: 20px;
-  bottom: -1px;
+  bottom: -3px;
   width: calc(100% - 40px);
   height: 5px;
   background-color: #2f4096;
@@ -111,6 +108,17 @@ main {
     border-radius: 10px;
     display: none;
 	.box-shadow: 4px 4px 10px #00000022;
+}
+.tab:not(#tab0) td:first-child {
+	width: 7ch;
+}
+
+.tab:not(#tab0) td:nth-child(2) {
+	width: 9ch;
+}
+
+.tab:not(#tab0) td:nth-child(5) {
+	width: 14ch;
 }
 
 #tab0,
@@ -166,12 +174,31 @@ table tr:first-child {
     background-color: #eee;
 }
 
+table tr:first-child th:first-child {
+		border-radius: 10px 0px 0px 0px;
+}
+
+table tr:first-child th:last-child {
+		border-radius: 0px 10px 0px 0px;
+}
+
+table tr:last-child td:first-child {
+		border-radius: 0px 0px 0px 10px;
+}
+
+table tr:last-child td:last-child {
+		border-radius: 0px 0px 10px 0px;
+}
+ table tr:last-child {
+	 border-bottom: none;
+ }
+
 tr.oplossing-gevuld td {
     background-color: #dff0d877;
 	color: #3c763d;
 }
 
-tr:hover td {
+tr:hover:not(.selected) td {
 	background-color: #d9edf7bb;
 	color: #000;
 }
@@ -179,12 +206,14 @@ tr:hover td {
 tr.selected td {
     background-color: #fff3cf;
 	color: #664e0f;
-	pointer-events: none;
+	.pointer-events: none;
 }
 
 td[contenteditable="true"]:focus {
     background-color: #fff;
-	color: #000
+	color: #000;
+	outline: 1px solid #faebcc;
+	border-radius: 10px;
 }
 
 .total-column,
