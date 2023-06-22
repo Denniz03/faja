@@ -148,7 +148,7 @@ th i {
 	transform: rotate(180deg);
 }
 
-#chartContainer {
+.chartContainer {
 	height: 400px;
 }
 
