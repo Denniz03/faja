@@ -10,11 +10,14 @@
 	
 	//CONNECT
     $conn = new mysqli($host, $username, $password, $dbName);
-    $conn -> set_charset("utf8mb4");
 	if (!$conn) {
 		$_SESSION['error'] = mysqli_connect_error();
 		$_SESSION['timeout'] = time() + 5;
 	};
+	$conn -> set_charset("utf8mb4");
+	$query = "SET lc_time_names = 'nl_NL';"; // Taalinstelling aanpassen
+	mysqli_query($conn, $query); // Uitvoeren van de taalinstelling
+	
     // BASICS
     date_default_timezone_set('Europe/Amsterdam');
     $title = 'FAJA';

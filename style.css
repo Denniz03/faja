@@ -55,7 +55,7 @@ header .logo {
 	}
 
 	.subtitle {
-		margin: 0px;
+		margin: -10px 0px 0px 0px;
 		font-size: 0.9em;
 		color: var(--text);
 		opacity: 0.5;
