@@ -55,8 +55,8 @@ header .logo {
 	}
 
 	.subtitle {
-		margin: -10px 0px 0px 0px;
-		font-size: 0.9em;
+		margin: -20px 0px 0px 0px;
+		font-size: 1em;
 		color: var(--text);
 		opacity: 0.5;
 	}
@@ -160,6 +160,8 @@ tbody {
 td {
     padding: 10px;
 	pointer-events: default;
+	box-sizing: border-box;
+	.border: 1px solid transparent;
 }
 
 tr {
@@ -200,12 +202,16 @@ tr.oplossing-gevuld td {
 
 tr:hover:not(.selected) td {
 	background-color: #d9edf7bb;
+	border-top: 1px solid #31708f44;
+	border-bottom: 1px solid #31708f44;
 	color: #000;
 }
 
 tr.selected td {
     background-color: #fff3cf;
 	color: #664e0f;
+	border-top: 1px solid #664e0f44;
+	border-bottom: 1px solid #664e0f44;
 	.pointer-events: none;
 }
 
